@@ -3,6 +3,33 @@ import { TOOLS_DESCRIPTION } from "./tools";
 import { formatContext } from "./contextFormatter";
 
 export async function decideAction(command: string, context: any) {
+  const lower = command.toLowerCase();
+
+  if (
+    lower.includes("baja") ||
+    lower.includes("scroll") ||
+    lower.includes("down")
+  ) {
+    return { action: "scroll" };
+  }
+
+  if (
+    lower.startsWith("ve a") ||
+    lower.startsWith("ir a") ||
+    lower.startsWith("go to")
+  ) {
+    const target = lower
+      .replace("ve a", "")
+      .replace("ir a", "")
+      .replace("go to", "")
+      .trim();
+
+    return {
+      action: "click",
+      targetText: target,
+    };
+  }
+
   const formatted = formatContext(context);
 
   const prompt = `
@@ -14,7 +41,10 @@ ${command}
 Page context:
 ${JSON.stringify(formatted, null, 2)}
 
-Respond only with JSON.
+Available elements:
+${JSON.stringify(context.elements.slice(0, 15), null, 2)}
+
+Respond ONLY with JSON.
 `;
 
   const completion = await groq.chat.completions.create({
@@ -27,11 +57,29 @@ Respond only with JSON.
     ],
   });
 
-  const content = completion.choices[0].message.content;
+  const content = completion.choices[0].message.content || "";
+
+  console.log("RAW MODEL RESPONSE:", content);
 
   try {
-    return JSON.parse(content || "{}");
-  } catch {
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+
+    if (!jsonMatch) {
+      console.log("No JSON found in model response");
+      return { action: "none" };
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    // normalizar acción
+    parsed.action = parsed.action?.toLowerCase();
+
+    console.log("AI DECISION:", parsed);
+
+    return parsed;
+  } catch (error) {
+    console.log("JSON PARSE ERROR:", error);
+
     return { action: "none" };
   }
 }

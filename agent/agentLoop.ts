@@ -1,46 +1,90 @@
 import { browserController } from "@/browser/playwrightController";
-import { buildSemanticDom } from "@/browser/semanticDom";
+import { buildFocusedDom } from "@/browser/focusedDom";
 import { decideAction } from "./aiDecision";
 import { smartClick, smartType } from "@/browser/actions";
+import { extractInteractiveElements } from "@/browser/interactiveElements";
+import { registerElements } from "@/browser/elementStore";
+import { rankElements } from "./elementRanking";
+import { extractResults } from "@/browser/resultExtractor";
+import { registerResults } from "@/browser/resultStore";
+import { openResult, clickByText } from "@/browser/actions";
 
 export async function runAgent(command: string) {
   const page = await browserController.getPage();
 
-  let steps = 0;
-  const maxSteps = 5;
+  console.log("USER COMMAND:", command);
 
-  while (steps < maxSteps) {
-    const context = await buildSemanticDom(page);
+  // extraer elementos interactivos
+  const rawElements = await extractInteractiveElements(page);
 
-    const decision = await decideAction(command, context);
+  const elements = rankElements(rawElements);
 
-    console.log("Agent stop:", steps, decision);
+  console.log("RANKED ELEMENTS:", elements);
 
-    if (decision.action === "none") {
-      break;
-    }
+  registerElements(elements);
 
-    if (decision.action === "click") {
+  // contexto de la página
+  const context = await buildFocusedDom(page);
+
+  const results = await extractResults(page);
+
+  registerResults(results);
+  console.log("VISIBLE RESULTS:", results);
+
+  // decisión del modelo
+  const decision = await decideAction(command, {
+    ...context,
+    elements,
+    results,
+  });
+
+  console.log("AI DECISION:", decision);
+
+  if (!decision || decision.action === "none") {
+    console.log("Agent finished: no action");
+    return { status: "no-action" };
+  }
+
+  console.log("EXECUTING ACTION:", decision.action);
+  console.log("TARGET:", decision.target);
+
+  try {
+    const action = decision.action?.toLowerCase();
+
+    if (action === "click") {
       await smartClick(page, decision.target);
     }
 
-    if (decision.action === "type") {
+    if (action === "type") {
       await smartType(page, decision.target, decision.text);
+
       await page.keyboard.press("Enter");
     }
 
-    if (decision.action === "navigate") {
-      await page.goto(decision.url);
+    if (action === "navigate") {
+      await page.goto(decision.url, { waitUntil: "domcontentloaded" });
     }
 
-    if (decision.action === "scroll") {
+    if (action === "scroll") {
       await page.mouse.wheel(0, 800);
     }
 
-    await page.waitForLoadState("domcontentloaded");
+    if (action === "open_result") {
+      await openResult(page, decision.target);
+    }
 
-    steps++;
+    if (action === "click" && decision.targetText) {
+      await clickByText(page, decision.targetText);
+      return;
+    }
+
+    await page.waitForLoadState("domcontentloaded").catch(() => {});
+  } catch (error) {
+    console.log("ACTION ERROR:", error);
   }
 
-  return { status: "completed", steps };
+  return {
+    status: "completed",
+    action: decision.action,
+  };
 }
