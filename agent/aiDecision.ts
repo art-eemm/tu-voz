@@ -1,6 +1,7 @@
 import { groq } from "./groqClient";
 import { TOOLS_DESCRIPTION } from "./tools";
 import { formatContext } from "./contextFormatter";
+import { getNavigationState } from "./navigationMemory";
 
 export async function decideAction(command: string, context: any) {
   const lower = command.toLowerCase();
@@ -32,11 +33,16 @@ export async function decideAction(command: string, context: any) {
 
   const formatted = formatContext(context);
 
+  const memory = getNavigationState();
+
   const prompt = `
 ${TOOLS_DESCRIPTION}
 
 User command:
 ${command}
+
+Navigation state:
+${JSON.stringify(memory, null, 2)}
 
 Page context:
 ${JSON.stringify(formatted, null, 2)}

@@ -41,5 +41,14 @@ User: "baja un poco"
  "action": "scroll"
 }
 
+Example navigation:
+
+User: "abre el segundo resultado"
+
+{
+ "action": "open_result",
+ "target": "result_2"
+}
+
 Respond ONLY with JSON.
 `;

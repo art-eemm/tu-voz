@@ -8,8 +8,10 @@ import { rankElements } from "./elementRanking";
 import { extractResults } from "@/browser/resultExtractor";
 import { registerResults } from "@/browser/resultStore";
 import { openResult, clickByText } from "@/browser/actions";
+import { updateNavigationState, setLastCommand } from "./navigationMemory";
 
 export async function runAgent(command: string) {
+  setLastCommand(command);
   const page = await browserController.getPage();
 
   console.log("USER COMMAND:", command);
@@ -77,6 +79,8 @@ export async function runAgent(command: string) {
       await clickByText(page, decision.targetText);
       return;
     }
+
+    updateNavigationState(page);
 
     await page.waitForLoadState("domcontentloaded").catch(() => {});
   } catch (error) {
