@@ -12,6 +12,8 @@ import { updateNavigationState, setLastCommand } from "./navigationMemory";
 import { findLinkByText } from "@/browser/linkDetector";
 import { drawOverlay } from "@/browser/visualOverlay";
 import { refreshOverlay } from "@/browser/overlayManager";
+import { extractReadableContent } from "@/browser/contentExtractor";
+import { readPageContent } from "./pageReader";
 
 export async function runAgent(command: string) {
   setLastCommand(command);
@@ -117,6 +119,19 @@ export async function runAgent(command: string) {
       await clickByText(page, decision.targetText);
       await refreshOverlay(page);
       return;
+    }
+
+    if (action === "read_page") {
+      const content = await extractReadableContent(page);
+
+      const answer = await readPageContent(command, content);
+
+      console.log("PAGE READER:", answer);
+
+      return {
+        status: "read",
+        response: answer,
+      };
     }
 
     await page.waitForLoadState("domcontentloaded").catch(() => {});

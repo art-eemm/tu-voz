@@ -7,6 +7,15 @@ export async function decideAction(command: string, context: any) {
   const lower = command.toLowerCase();
 
   if (
+    lower.includes("lee") ||
+    lower.includes("qué dice") ||
+    lower.includes("resume") ||
+    lower.includes("explica")
+  ) {
+    return { action: "read_page" };
+  }
+
+  if (
     lower.includes("baja") ||
     lower.includes("scroll") ||
     lower.includes("down")
