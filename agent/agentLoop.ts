@@ -9,6 +9,9 @@ import { extractResults } from "@/browser/resultExtractor";
 import { registerResults } from "@/browser/resultStore";
 import { openResult, clickByText } from "@/browser/actions";
 import { updateNavigationState, setLastCommand } from "./navigationMemory";
+import { findLinkByText } from "@/browser/linkDetector";
+import { drawOverlay } from "@/browser/visualOverlay";
+import { refreshOverlay } from "@/browser/overlayManager";
 
 export async function runAgent(command: string) {
   setLastCommand(command);
@@ -23,6 +26,8 @@ export async function runAgent(command: string) {
 
   console.log("RANKED ELEMENTS:", elements);
 
+  await drawOverlay(page, elements);
+
   registerElements(elements);
 
   // contexto de la página
@@ -32,6 +37,30 @@ export async function runAgent(command: string) {
 
   registerResults(results);
   console.log("VISIBLE RESULTS:", results);
+
+  const lower = command.toLowerCase();
+
+  if (
+    lower.startsWith("ve a") ||
+    lower.startsWith("ir a") ||
+    lower.startsWith("go to")
+  ) {
+    const target = lower
+      .replace("ve a", "")
+      .replace("ir a", "")
+      .replace("go to", "")
+      .trim();
+
+    console.log("SEMANTIC LINK NAVIGATION:", target);
+
+    const clicked = await findLinkByText(page, target);
+
+    if (clicked) {
+      await page.waitForLoadState("domcontentloaded").catch(() => {});
+
+      return { status: "link-opened", target };
+    }
+  }
 
   // decisión del modelo
   const decision = await decideAction(command, {
@@ -55,34 +84,51 @@ export async function runAgent(command: string) {
 
     if (action === "click") {
       await smartClick(page, decision.target);
+      await refreshOverlay(page);
     }
 
     if (action === "type") {
       await smartType(page, decision.target, decision.text);
 
       await page.keyboard.press("Enter");
+      await refreshOverlay(page);
     }
 
     if (action === "navigate") {
       await page.goto(decision.url, { waitUntil: "domcontentloaded" });
+      await refreshOverlay(page);
     }
 
     if (action === "scroll") {
-      await page.mouse.wheel(0, 800);
+      if (decision.direction === "up") {
+        await page.mouse.wheel(0, -800);
+      } else {
+        await page.mouse.wheel(0, 800);
+      }
+      await refreshOverlay(page);
     }
 
     if (action === "open_result") {
       await openResult(page, decision.target);
+      await refreshOverlay(page);
     }
 
     if (action === "click" && decision.targetText) {
       await clickByText(page, decision.targetText);
+      await refreshOverlay(page);
       return;
     }
 
+    await page.waitForLoadState("domcontentloaded").catch(() => {});
+
     updateNavigationState(page);
 
-    await page.waitForLoadState("domcontentloaded").catch(() => {});
+    const rawElements = await extractInteractiveElements(page);
+
+    const elements = rankElements(rawElements);
+
+    registerElements(elements);
+    console.log("UPDATED ELEMENTS:", elements);
   } catch (error) {
     console.log("ACTION ERROR:", error);
   }

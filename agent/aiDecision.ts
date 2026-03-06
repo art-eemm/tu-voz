@@ -11,7 +11,16 @@ export async function decideAction(command: string, context: any) {
     lower.includes("scroll") ||
     lower.includes("down")
   ) {
-    return { action: "scroll" };
+    return { action: "scroll", direction: "down" };
+  }
+
+  if (
+    lower.includes("sube") ||
+    lower.includes("arriba") ||
+    lower.includes("scroll up") ||
+    lower.includes("up")
+  ) {
+    return { action: "scroll", direction: "up" };
   }
 
   if (
