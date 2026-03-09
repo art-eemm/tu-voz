@@ -1,48 +1,62 @@
+let queue: string[] = [];
 let speaking = false;
 
-function splitText(text: string, max = 180) {
-  const parts = [];
+function splitText(text: string, maxLength = 180) {
+  const parts: string[] = [];
+
   let current = "";
 
   const words = text.split(" ");
 
   for (const word of words) {
-    if ((current + word).length > max) {
-      parts.push(current);
+    if ((current + word).length > maxLength) {
+      parts.push(current.trim());
       current = "";
     }
 
     current += word + " ";
   }
 
-  if (current) parts.push(current);
+  if (current.trim().length) {
+    parts.push(current.trim());
+  }
 
   return parts;
+}
+
+function speakNext() {
+  if (queue.length === 0) {
+    speaking = false;
+    return;
+  }
+
+  speaking = true;
+
+  const text = queue.shift()!;
+
+  const utterance = new SpeechSynthesisUtterance(text);
+
+  utterance.lang = "es-ES";
+  utterance.rate = 1;
+  utterance.pitch = 1;
+
+  utterance.onend = () => {
+    speakNext();
+  };
+
+  window.speechSynthesis.speak(utterance);
 }
 
 export function speak(text: string) {
   if (!text) return;
 
-  const chunks = splitText(text);
+  const parts = splitText(text);
 
-  window.speechSynthesis.cancel();
+  queue.push(...parts);
 
-  speaking = true;
-
-  chunks.forEach((chunk, i) => {
-    const utterance = new SpeechSynthesisUtterance(chunk);
-
-    utterance.lang = "es-ES";
-    utterance.rate = 1;
-
-    if (i === chunks.length - 1) {
-      utterance.onend = () => {
-        speaking = false;
-      };
-    }
-
-    window.speechSynthesis.speak(utterance);
-  });
+  if (!speaking) {
+    speakNext();
+  }
 }
 
 export function isSpeaking() {

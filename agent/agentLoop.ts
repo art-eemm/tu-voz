@@ -22,6 +22,8 @@ import { executePlan } from "./planExecutor";
 import { reflect } from "./selfReflection";
 import { drawDebugOverlay } from "@/browser/debugOverlay";
 import { speechForAction } from "./speechMidleware";
+import { pushVoiceEvent } from "./voiceEvents";
+import { narratePage } from "./pageNarratot";
 
 export async function runAgent(command: string) {
   setLastCommand(command);
@@ -75,9 +77,15 @@ export async function runAgent(command: string) {
 
       await refreshOverlay(page);
 
+      await narratePage(page);
+
+      const voice = speechForAction("search", { query: intent.query });
+
+      pushVoiceEvent(voice);
+
       return {
         status: "search-executed",
-        voice: speechForAction("search", { query: intent.query }),
+        voice,
       };
     }
   }
@@ -87,7 +95,11 @@ export async function runAgent(command: string) {
 
     await refreshOverlay(page);
 
-    return { status: "went-back", voice: speechForAction("go_back") };
+    const voice = speechForAction("go_back");
+
+    pushVoiceEvent(voice);
+
+    return { status: "went-back", voice };
   }
 
   if (intent.type === "scroll") {
@@ -97,7 +109,11 @@ export async function runAgent(command: string) {
 
     await refreshOverlay(page);
 
-    return { status: "scrolled", voice: speechForAction("scroll") };
+    const voice = speechForAction("scroll");
+
+    pushVoiceEvent(voice);
+
+    return { status: "scrolled", voice };
   }
 
   if (intent.type === "read_page") {
@@ -107,6 +123,11 @@ export async function runAgent(command: string) {
 
     if (answer) addConversation("assistant", answer);
 
+    const voice = speechForAction("read_page", { query: answer });
+
+    // 🔊 enviar evento de voz
+    pushVoiceEvent(voice);
+
     await drawDebugOverlay(page, {
       command,
       reflection: { success: true },
@@ -115,7 +136,7 @@ export async function runAgent(command: string) {
     return {
       status: "read",
       response: answer,
-      voice: speechForAction("read_page", { query: answer }),
+      voice,
     };
   }
 
@@ -125,6 +146,8 @@ export async function runAgent(command: string) {
     if (clicked) {
       await page.waitForLoadState("domcontentloaded").catch(() => {});
 
+      await narratePage(page);
+
       await refreshOverlay(page);
 
       updateAgentState({
@@ -133,10 +156,14 @@ export async function runAgent(command: string) {
         lastAction: "navigate_text",
       });
 
+      const voice = speechForAction("navigate", { query: intent.target });
+
+      pushVoiceEvent(voice);
+
       return {
         status: "link-opened",
         target: intent.target,
-        voice: speechForAction("navigate", { query: intent.target }),
+        voice,
       };
     }
   }
@@ -248,6 +275,8 @@ export async function runAgent(command: string) {
       if (clicked) {
         await page.waitForLoadState("domcontentloaded").catch(() => {});
 
+        await narratePage(page);
+
         await refreshOverlay(page);
 
         updateAgentState({
@@ -303,6 +332,8 @@ export async function runAgent(command: string) {
       clearTracking();
 
       await page.goto(decision.url, { waitUntil: "domcontentloaded" });
+
+      await narratePage(page);
     }
 
     if (action === "read_page") {
@@ -316,6 +347,10 @@ export async function runAgent(command: string) {
         addConversation("assistant", answer);
       }
 
+      const voice = answer || "No pude obtener el contenido de la página";
+
+      pushVoiceEvent(voice);
+
       updateAgentState({
         lastCommand: command,
         lastPage: page.url(),
@@ -325,7 +360,7 @@ export async function runAgent(command: string) {
       return {
         status: "read",
         response: answer,
-        voice: answer || "No pude obtener el contenido de la página",
+        voice,
       };
     }
 

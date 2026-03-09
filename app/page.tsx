@@ -1,9 +1,27 @@
 "use client";
 
+import { useEffect } from "react";
 import { useVoice } from "./hooks/useVoice";
 import { speak } from "./utils/voice";
 
 export default function Page() {
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch("/api/voice-events");
+
+        const data = await res.json();
+
+        if (data.voice) {
+          console.log("VOICE EVENT:", data.voice);
+
+          speak(data.voice);
+        }
+      } catch {}
+    }, 1200);
+    return () => clearInterval(interval);
+  }, []);
+
   const { startListening } = useVoice(async (command) => {
     console.log("COMMAND", command);
     const res = await fetch("/api/command", {
