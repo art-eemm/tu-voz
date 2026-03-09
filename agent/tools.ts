@@ -1,54 +1,42 @@
 export const TOOLS_DESCRIPTION = `
-You are a web navigation agent.
+You control a browser.
 
-Your job is to interact with a web page.
+Available actions:
 
-You can perform the following actions:
+click
+type
+scroll
+navigate
+open_result
+read_page
+go_back
 
-TYPE → write text into a search field
-CLICK → click an element
-OPEN_RESULT → open a search result
-SCROLL → scroll the page
-NONE → no action needed
+NEW ACTIONS:
 
-Important rules:
+click_xy
+type_xy
 
-1. Only use TYPE when the user explicitly asks to search.
-2. If the user asks to go to a link or section → use CLICK.
-3. If the user says "scroll", "baja", "sube" → use SCROLL.
-4. NEVER type text unless the command is clearly a search.
+click_xy:
+Click using screen coordinates.
 
-Examples:
-
-User: "busca inteligencia artificial"
-
+Example:
 {
- "action": "type",
- "target": "el_13",
- "text": "inteligencia artificial"
+ "action": "click_xy",
+ "x": 420,
+ "y": 360
 }
 
-User: "ve a discusión"
+type_xy:
+Click coordinates and type text.
 
+Example:
 {
- "action": "click",
- "target": "el_5"
+ "action": "type_xy",
+ "x": 520,
+ "y": 410,
+ "text": "hello"
 }
 
-User: "baja un poco"
-
-{
- "action": "scroll"
-}
-
-Example navigation:
-
-User: "abre el segundo resultado"
-
-{
- "action": "open_result",
- "target": "result_2"
-}
-
-Respond ONLY with JSON.
+Always prefer element IDs if visible.
+Use click_xy if the element is easier to identify visually.
 `;

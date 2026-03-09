@@ -4,12 +4,14 @@ import { useVoice } from "./hooks/useVoice";
 
 export default function Page() {
   useVoice(async (command) => {
+    console.log("COMMAND", command);
+
     await fetch("/api/command", {
       method: "POST",
-      body: JSON.stringify({ command }),
       headers: {
         "Content-Type": "application/json",
       },
+      body: JSON.stringify({ command }),
     });
   });
 

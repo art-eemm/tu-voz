@@ -14,9 +14,14 @@ import { drawOverlay } from "@/browser/visualOverlay";
 import { refreshOverlay } from "@/browser/overlayManager";
 import { extractReadableContent } from "@/browser/contentExtractor";
 import { readPageContent } from "./pageReader";
+import { updateAgentState, addConversation } from "./agentState";
+import { clearTracking, trackElement } from "@/browser/elementTracker";
 
 export async function runAgent(command: string) {
   setLastCommand(command);
+
+  addConversation("user", command);
+
   const page = await browserController.getPage();
 
   console.log("USER COMMAND:", command);
@@ -27,6 +32,8 @@ export async function runAgent(command: string) {
   const elements = rankElements(rawElements);
 
   console.log("RANKED ELEMENTS:", elements);
+
+  trackElement(elements, page.url());
 
   await drawOverlay(page, elements);
 
@@ -41,6 +48,12 @@ export async function runAgent(command: string) {
   console.log("VISIBLE RESULTS:", results);
 
   const lower = command.toLowerCase();
+
+  const screenshotBuffer = await page.screenshot({
+    type: "jpeg",
+  });
+
+  const screenshot = screenshotBuffer.toString("base64");
 
   if (
     lower.startsWith("ve a") ||
@@ -65,11 +78,15 @@ export async function runAgent(command: string) {
   }
 
   // decisión del modelo
-  const decision = await decideAction(command, {
-    ...context,
-    elements,
-    results,
-  });
+  const decision = await decideAction(
+    command,
+    {
+      ...context,
+      elements,
+      results,
+    },
+    screenshot,
+  );
 
   console.log("AI DECISION:", decision);
 
@@ -83,22 +100,99 @@ export async function runAgent(command: string) {
 
   try {
     const action = decision.action?.toLowerCase();
+    const rawElements = await extractInteractiveElements(page);
+    const elements = rankElements(rawElements);
+
+    if (action === "navigate") {
+      clearTracking();
+    }
+
+    if (action === "click_xy") {
+      await page.mouse.click(decision.x, decision.y);
+
+      await refreshOverlay(page);
+
+      updateAgentState({
+        lastCommand: command,
+        lastPage: page.url(),
+        lastAction: action,
+      });
+
+      return {
+        status: "clicked_xy",
+      };
+    }
+
+    if (action === "type_xy") {
+      await page.mouse.click(decision.x, decision.y);
+
+      await page.keyboard.type(decision.text || "", { delay: 40 });
+
+      await page.keyboard.press("Enter");
+
+      await refreshOverlay(page);
+
+      updateAgentState({
+        lastCommand: command,
+        lastPage: page.url(),
+        lastAction: action,
+      });
+
+      return {
+        status: "typed_xy",
+      };
+    }
 
     if (action === "click") {
       await smartClick(page, decision.target);
       await refreshOverlay(page);
+
+      updateAgentState({
+        lastCommand: command,
+        lastPage: page.url(),
+        lastAction: action,
+      });
     }
 
     if (action === "type") {
+      if (!decision.target) {
+        console.log("NO TARGET FOR TYPE → using first search input");
+
+        const fallbackInput = elements.find(
+          (e) =>
+            e.tag === "input" && (e.type === "search" || e.type === "text"),
+        );
+
+        if (fallbackInput) {
+          decision.target = fallbackInput.id;
+        } else {
+          console.log("NO INPUT FOUND");
+          return { status: "no-input-found" };
+        }
+      }
+
       await smartType(page, decision.target, decision.text);
 
       await page.keyboard.press("Enter");
+
       await refreshOverlay(page);
+
+      updateAgentState({
+        lastCommand: command,
+        lastPage: page.url(),
+        lastAction: action,
+      });
     }
 
     if (action === "navigate") {
       await page.goto(decision.url, { waitUntil: "domcontentloaded" });
       await refreshOverlay(page);
+
+      updateAgentState({
+        lastCommand: command,
+        lastPage: page.url(),
+        lastAction: action,
+      });
     }
 
     if (action === "scroll") {
@@ -107,17 +201,36 @@ export async function runAgent(command: string) {
       } else {
         await page.mouse.wheel(0, 800);
       }
+
+      updateAgentState({
+        lastCommand: command,
+        lastPage: page.url(),
+        lastAction: action,
+      });
+
       await refreshOverlay(page);
     }
 
     if (action === "open_result") {
       await openResult(page, decision.target);
       await refreshOverlay(page);
+
+      updateAgentState({
+        lastCommand: command,
+        lastPage: page.url(),
+        lastAction: action,
+      });
     }
 
     if (action === "click" && decision.targetText) {
       await clickByText(page, decision.targetText);
       await refreshOverlay(page);
+
+      updateAgentState({
+        lastCommand: command,
+        lastPage: page.url(),
+        lastAction: action,
+      });
       return;
     }
 
@@ -128,19 +241,41 @@ export async function runAgent(command: string) {
 
       console.log("PAGE READER:", answer);
 
+      if (answer) {
+        addConversation("assistant", answer);
+      }
+
+      updateAgentState({
+        lastCommand: command,
+        lastPage: page.url(),
+        lastAction: action,
+      });
+
       return {
         status: "read",
         response: answer,
       };
     }
 
+    if (action === "go_back") {
+      await page.goBack({ waitUntil: "domcontentloaded" }).catch(() => {});
+
+      await refreshOverlay(page);
+
+      updateAgentState({
+        lastCommand: command,
+        lastPage: page.url(),
+        lastAction: action,
+      });
+
+      return {
+        status: "went-back",
+      };
+    }
+
     await page.waitForLoadState("domcontentloaded").catch(() => {});
 
     updateNavigationState(page);
-
-    const rawElements = await extractInteractiveElements(page);
-
-    const elements = rankElements(rawElements);
 
     registerElements(elements);
     console.log("UPDATED ELEMENTS:", elements);

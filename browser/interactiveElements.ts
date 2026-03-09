@@ -1,6 +1,8 @@
 import { Page } from "playwright";
 
 export async function extractInteractiveElements(page: Page) {
+  await page.waitForLoadState("domcontentloaded").catch(() => {});
+
   const elements = await page.evaluate(() => {
     function visible(el: Element) {
       const rect = el.getBoundingClientRect();

@@ -2,9 +2,42 @@ import { groq } from "./groqClient";
 import { TOOLS_DESCRIPTION } from "./tools";
 import { formatContext } from "./contextFormatter";
 import { getNavigationState } from "./navigationMemory";
+import { getMemory } from "./taskMemory";
+import { getAgentState } from "./agentState";
+import { getTrackedElements } from "@/browser/elementTracker";
 
-export async function decideAction(command: string, context: any) {
+export async function decideAction(
+  command: string,
+  context: any,
+  screenshot?: string,
+) {
   const lower = command.toLowerCase();
+
+  const state = getAgentState();
+
+  const tracked = getTrackedElements();
+
+  if (
+    lower.includes("qué dice") ||
+    lower.includes("que dice") ||
+    lower.includes("lee esta página") ||
+    lower.includes("lee la página") ||
+    lower.includes("resume esta página") ||
+    lower.includes("explica esta página")
+  ) {
+    return { action: "read_page" };
+  }
+
+  if (
+    lower.includes("regresa") ||
+    lower.includes("volver") ||
+    lower.includes("ve al anterior") ||
+    lower.includes("atrás") ||
+    lower.includes("retrocede") ||
+    lower.includes("back")
+  ) {
+    return { action: "go_back" };
+  }
 
   if (
     lower.includes("lee") ||
@@ -53,11 +86,19 @@ export async function decideAction(command: string, context: any) {
 
   const memory = getNavigationState();
 
+  const conversationMemory = getMemory();
+
   const prompt = `
 ${TOOLS_DESCRIPTION}
 
 User command:
 ${command}
+
+Agent state:
+${JSON.stringify(state, null, 2)}
+
+Conversation memory:
+${JSON.stringify(conversationMemory, null, 2)}
 
 Navigation state:
 ${JSON.stringify(memory, null, 2)}
@@ -68,15 +109,50 @@ ${JSON.stringify(formatted, null, 2)}
 Available elements:
 ${JSON.stringify(context.elements.slice(0, 15), null, 2)}
 
+Tracked elements from previous steps:
+${JSON.stringify(tracked, null, 2)}
+
+The screenshot contains visual markers like:
+
+el_1
+el_2
+el_3
+
+If the DOM elements are incorrect, you may use coordinates from the screenshot.
+
+When using the "type" action you MUST include a target element id.
+
+Example:
+{
+ "action": "type",
+ "target": "el_13",
+ "text": "youtube"
+}
+
 Respond ONLY with JSON.
 `;
 
   const completion = await groq.chat.completions.create({
-    model: "llama-3.3-70b-versatile",
+    model: "meta-llama/llama-4-scout-17b-16e-instruct",
     messages: [
       {
         role: "user",
-        content: prompt,
+        content: [
+          {
+            type: "text",
+            text: prompt,
+          },
+          ...(screenshot
+            ? [
+                {
+                  type: "image_url" as const,
+                  image_url: {
+                    url: `data:image/jpeg;base64,${screenshot}`,
+                  },
+                },
+              ]
+            : []),
+        ],
       },
     ],
   });
