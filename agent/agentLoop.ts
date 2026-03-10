@@ -25,6 +25,8 @@ import { speechForAction } from "./speechMidleware";
 import { pushVoiceEvent } from "./voiceBus";
 import { narratePage } from "./pageNarrator";
 import { addMessage, getConversation } from "./conversationMemory";
+import { detectContextCommand } from "./contextCommands";
+import { getResults } from "@/browser/resultStore";
 
 export async function runAgent(command: string) {
   setLastCommand(command);
@@ -175,6 +177,49 @@ export async function runAgent(command: string) {
         target: intent.target,
         voice,
       };
+    }
+  }
+
+  const contextual = detectContextCommand(command);
+
+  if (contextual?.type === "open_result_index") {
+    const results = getResults();
+
+    const result = results[contextual.index - 1];
+
+    if (result) {
+      await page.goto(result.href);
+
+      await narratePage(page);
+
+      const voice = `Abriendo resultado ${contextual.index}`;
+
+      addMessage("assistant", voice);
+
+      pushVoiceEvent(voice);
+
+      return {
+        status: "result-opened",
+        index: contextual.index,
+      };
+    }
+  }
+
+  if (contextual?.type === "click_button_index") {
+    const buttons = elements.filter((e) => e.tag === "button");
+
+    const button = buttons[contextual.index - 1];
+
+    if (button) {
+      await smartClick(page, button.id);
+
+      const voice = `Presionando botón ${contextual.index}`;
+
+      addMessage("assistant", voice);
+
+      pushVoiceEvent(voice);
+
+      return { status: "button-clicked" };
     }
   }
 

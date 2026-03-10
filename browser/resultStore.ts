@@ -6,6 +6,6 @@ export function registerResults(results: any[]) {
   });
 }
 
-export function getResults(id: string) {
-  return resultStore[id];
+export function getResults() {
+  return resultStore;
 }
