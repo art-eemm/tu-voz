@@ -3,26 +3,22 @@ type Message = {
   content: string;
 };
 
-let history: Message[] = [];
+let memory: Message[] = [];
 
-export function addUserMessage(text: string) {
-  history.push({
-    role: "user",
-    content: text,
-  });
+const MAX_MEMORY = 10;
 
-  history = history.slice(-6);
+export function addMessage(role: "user" | "assistant", content: string) {
+  memory.push({ role, content });
+
+  if (memory.length > MAX_MEMORY) {
+    memory.shift();
+  }
 }
 
-export function addAssistantMessage(text: string) {
-  history.push({
-    role: "assistant",
-    content: text,
-  });
-
-  history = history.slice(-10);
+export function getConversation() {
+  return memory;
 }
 
-export function getConversationHistory() {
-  return history;
+export function clearConversation() {
+  memory = [];
 }

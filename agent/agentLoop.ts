@@ -24,10 +24,11 @@ import { drawDebugOverlay } from "@/browser/debugOverlay";
 import { speechForAction } from "./speechMidleware";
 import { pushVoiceEvent } from "./voiceBus";
 import { narratePage } from "./pageNarrator";
+import { addMessage, getConversation } from "./conversationMemory";
 
 export async function runAgent(command: string) {
   setLastCommand(command);
-  addConversation("user", command);
+  addMessage("user", command);
 
   const page = await browserController.getPage();
 
@@ -81,6 +82,8 @@ export async function runAgent(command: string) {
 
       const voice = speechForAction("search", { query: intent.query });
 
+      addMessage("assistant", voice);
+
       pushVoiceEvent(voice);
 
       return {
@@ -97,6 +100,8 @@ export async function runAgent(command: string) {
 
     const voice = speechForAction("go_back");
 
+    addMessage("assistant", voice);
+
     pushVoiceEvent(voice);
 
     return { status: "went-back", voice };
@@ -111,6 +116,8 @@ export async function runAgent(command: string) {
 
     const voice = speechForAction("scroll");
 
+    addMessage("assistant", voice);
+
     pushVoiceEvent(voice);
 
     return { status: "scrolled", voice };
@@ -124,6 +131,8 @@ export async function runAgent(command: string) {
     if (answer) addConversation("assistant", answer);
 
     const voice = speechForAction("read_page", { query: answer });
+
+    addMessage("assistant", voice);
 
     // 🔊 enviar evento de voz
     pushVoiceEvent(voice);
@@ -158,6 +167,7 @@ export async function runAgent(command: string) {
 
       const voice = speechForAction("navigate", { query: intent.target });
 
+      addMessage("assistant", voice);
       pushVoiceEvent(voice);
 
       return {
@@ -296,7 +306,7 @@ export async function runAgent(command: string) {
       await smartClick(page, decision.target);
     }
 
-    if (action === "click" && decision.targetText) {
+    if (action === "click" && !decision.targetText) {
       await clickByText(page, decision.targetText);
 
       await refreshOverlay(page);
@@ -332,8 +342,6 @@ export async function runAgent(command: string) {
       clearTracking();
 
       await page.goto(decision.url, { waitUntil: "domcontentloaded" });
-
-      await narratePage(page);
 
       await page.waitForLoadState("domcontentloaded");
       await narratePage(page);

@@ -5,6 +5,7 @@ import { getNavigationState } from "./navigationMemory";
 import { getMemory } from "./taskMemory";
 import { getAgentState } from "./agentState";
 import { getTrackedElements } from "@/browser/elementTracker";
+import { getConversation } from "./conversationMemory";
 
 export async function decideAction(
   command: string,
@@ -23,7 +24,10 @@ export async function decideAction(
     lower.includes("lee esta página") ||
     lower.includes("lee la página") ||
     lower.includes("resume esta página") ||
-    lower.includes("explica esta página")
+    lower.includes("explica esta página") ||
+    lower.includes("lee") ||
+    lower.includes("resume") ||
+    lower.includes("explica")
   ) {
     return { action: "read_page" };
   }
@@ -37,15 +41,6 @@ export async function decideAction(
     lower.includes("back")
   ) {
     return { action: "go_back" };
-  }
-
-  if (
-    lower.includes("lee") ||
-    lower.includes("qué dice") ||
-    lower.includes("resume") ||
-    lower.includes("explica")
-  ) {
-    return { action: "read_page" };
   }
 
   if (
@@ -86,19 +81,19 @@ export async function decideAction(
 
   const memory = getNavigationState();
 
-  const conversationMemory = getMemory();
+  const history = getConversation().slice(-6);
 
   const prompt = `
 ${TOOLS_DESCRIPTION}
+
+Conversation history:
+${JSON.stringify(history, null, 2)}
 
 User command:
 ${command}
 
 Agent state:
 ${JSON.stringify(state, null, 2)}
-
-Conversation memory:
-${JSON.stringify(conversationMemory, null, 2)}
 
 Navigation state:
 ${JSON.stringify(memory, null, 2)}
@@ -107,7 +102,18 @@ Page context:
 ${JSON.stringify(formatted, null, 2)}
 
 Available elements:
-${JSON.stringify(context.elements.slice(0, 15), null, 2)}
+${JSON.stringify(
+  context.elements
+    .map((e) => ({
+      id: e.id,
+      label: e.label,
+      type: e.tag,
+      score: e.score,
+    }))
+    .slice(0, 15),
+  null,
+  2,
+)}
 
 Tracked elements from previous steps:
 ${JSON.stringify(tracked, null, 2)}
