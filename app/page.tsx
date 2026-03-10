@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useVoice } from "./hooks/useVoice";
 import { speak } from "./utils/voice";
 import { motion } from "framer-motion";
@@ -27,7 +27,27 @@ export default function Page() {
     startBrowser();
   }, []);
 
-  const { startListening, stopListening } = useVoice(async (command) => {
+  useEffect(() => {
+    const eventSource = new EventSource("/api/voice-stream");
+
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data?.text) {
+        speak(data.text);
+      }
+    };
+
+    eventSource.onerror = () => {
+      console.log("Voice stream disconnected");
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, []);
+
+  const handleCommand = useCallback(async (command: string) => {
     setTranscript(command);
 
     setHistory((prev) => [command, ...prev]);
@@ -46,7 +66,9 @@ export default function Page() {
       setResponse(data.voice);
       speak(data.voice);
     }
-  });
+  }, []);
+
+  const { startListening, stopListening } = useVoice(handleCommand);
 
   function toggleVoice() {
     if (listening) {

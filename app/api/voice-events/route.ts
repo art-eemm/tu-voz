@@ -1,9 +1,9 @@
-import { popVoiceEvent } from "@/agent/voiceEvents";
+import { getVoiceEvent } from "@/agent/voiceEvents";
 
 export async function GET() {
-  const event = popVoiceEvent();
+  const text = getVoiceEvent();
 
   return Response.json({
-    voice: event || null,
+    text,
   });
 }

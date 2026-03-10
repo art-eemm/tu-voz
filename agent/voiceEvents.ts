@@ -1,15 +1,23 @@
-const events: string[] = [];
+declare global {
+  var __VOICE_EVENT__: string | null | undefined;
+}
+
+if (globalThis.__VOICE_EVENT__ === undefined) {
+  globalThis.__VOICE_EVENT__ = null;
+}
 
 export function pushVoiceEvent(text: string) {
   if (!text) return;
 
-  events.push(text);
+  console.log("VOICE EVENT:", text);
 
-  if (events.length > 20) {
-    events.shift();
-  }
+  globalThis.__VOICE_EVENT__ = text;
 }
 
-export function popVoiceEvent() {
-  return events.shift();
+export function getVoiceEvent() {
+  const event = globalThis.__VOICE_EVENT__;
+
+  globalThis.__VOICE_EVENT__ = null;
+
+  return event;
 }

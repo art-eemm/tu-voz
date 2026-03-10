@@ -22,7 +22,7 @@ import { executePlan } from "./planExecutor";
 import { reflect } from "./selfReflection";
 import { drawDebugOverlay } from "@/browser/debugOverlay";
 import { speechForAction } from "./speechMidleware";
-import { pushVoiceEvent } from "./voiceEvents";
+import { pushVoiceEvent } from "./voiceBus";
 import { narratePage } from "./pageNarratot";
 
 export async function runAgent(command: string) {
