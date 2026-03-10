@@ -1,20 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { isSpeaking, speak } from "../utils/voice";
+import { isSpeaking } from "../utils/voice";
 
 export function useVoice(onCommand: (text: string) => void) {
   const recognitionRef = useRef<any>(null);
-  const commandRef = useRef(onCommand);
-
-  // mantener referencia estable del callback
-  useEffect(() => {
-    commandRef.current = onCommand;
-  }, [onCommand]);
+  const listeningRef = useRef(false);
 
   useEffect(() => {
-    if (recognitionRef.current) return;
-
     const SpeechRecognition =
       (window as any).SpeechRecognition ||
       (window as any).webkitSpeechRecognition;
@@ -32,13 +25,24 @@ export function useVoice(onCommand: (text: string) => void) {
 
     recognition.onstart = () => {
       console.log("VOICE STARTED");
+      listeningRef.current = true;
     };
 
     recognition.onend = () => {
       console.log("VOICE STOPPED");
+      listeningRef.current = false;
+
+      // escuchar continuamente
+      // if (!isSpeaking()) {
+      //   try {
+      //     recognition.start();
+      //   } catch {}
+      // }
     };
 
     recognition.onresult = (event: any) => {
+      if (isSpeaking()) return;
+
       const result = event.results[event.results.length - 1];
 
       if (!result || !result[0]) return;
@@ -47,28 +51,10 @@ export function useVoice(onCommand: (text: string) => void) {
 
       console.log("VOICE COMMAND:", text);
 
-      if (isSpeaking()) return;
-
-      commandRef.current(text);
+      onCommand(text);
     };
 
     recognitionRef.current = recognition;
-  }, []);
-
-  // escuchar eventos de voz del backend
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch("/api/voice-events");
-        const data = await res.json();
-
-        if (data?.text) {
-          speak(data.text);
-        }
-      } catch {}
-    }, 800);
-
-    return () => clearInterval(interval);
   }, []);
 
   function startListening() {

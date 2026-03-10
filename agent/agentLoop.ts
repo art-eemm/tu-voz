@@ -23,7 +23,7 @@ import { reflect } from "./selfReflection";
 import { drawDebugOverlay } from "@/browser/debugOverlay";
 import { speechForAction } from "./speechMidleware";
 import { pushVoiceEvent } from "./voiceBus";
-import { narratePage } from "./pageNarratot";
+import { narratePage } from "./pageNarrator";
 
 export async function runAgent(command: string) {
   setLastCommand(command);
@@ -333,6 +333,9 @@ export async function runAgent(command: string) {
 
       await page.goto(decision.url, { waitUntil: "domcontentloaded" });
 
+      await narratePage(page);
+
+      await page.waitForLoadState("domcontentloaded");
       await narratePage(page);
     }
 

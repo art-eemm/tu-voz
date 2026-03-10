@@ -41,7 +41,8 @@ function speakNext() {
   utterance.pitch = 1;
 
   utterance.onend = () => {
-    speakNext();
+    // speakNext();
+    speaking = false;
   };
 
   window.speechSynthesis.speak(utterance);
