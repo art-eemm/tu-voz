@@ -26,7 +26,7 @@ export async function extractInteractiveElements(page: Page) {
     let idCounter = 1;
 
     const interactive = document.querySelectorAll(
-      "input, textarea, button, a, select, [role='button'], [onclick]",
+      "input, textarea, button, select, [role='button'], [onclick], a[href]",
     );
 
     interactive.forEach((el: any) => {
@@ -46,6 +46,14 @@ export async function extractInteractiveElements(page: Page) {
         name ||
         "";
 
+      if (rect.width > window.innerWidth * 0.8) return;
+
+      if (rect.width < 20 || rect.height < 20) return;
+
+      const aria = el.getAttribute("aria-label") || "";
+
+      if (!el.innerText && !aria && !placeholder) return;
+
       result.push({
         id: `el_${idCounter++}`,
         tag: el.tagName.toLowerCase(),
@@ -54,8 +62,8 @@ export async function extractInteractiveElements(page: Page) {
         placeholder: clean(placeholder),
         name,
         domId: id,
-        x: rect.x,
-        y: rect.y,
+        x: rect.left,
+        y: rect.top,
         width: rect.width,
         height: rect.height,
       });

@@ -3,15 +3,48 @@ import { narratePage } from "./pageNarrator";
 import { speakAction } from "./voiceHandler";
 import { openNewTab, switchTab, closeTab } from "@/browser/tabManager";
 import { smartType } from "@/browser/actions";
+import { getSiteProfile } from "./getSiteProfile";
 
 export async function handleIntent(intent, page, elements) {
   // -----------------------------
   // SEARCH (context aware)
   // -----------------------------
   if (intent.type === "search") {
+    const url = page.url();
+
+    const profile = getSiteProfile(url);
+
     const query = intent.query;
 
-    // buscar input de búsqueda dentro de la página
+    // --------------------------------
+    // SITE PROFILE SEARCH
+    // --------------------------------
+
+    if (profile?.searchInput) {
+      const input = await page.$(profile.searchInput);
+
+      if (input) {
+        await input.fill(query);
+
+        await page.keyboard.press("Enter");
+
+        await refreshOverlay(page);
+
+        await narratePage(page);
+
+        speakAction("search_page", { query });
+
+        return {
+          status: "site-search",
+          site: profile.name,
+        };
+      }
+    }
+
+    // --------------------------------
+    // GENERIC SEARCH INPUT
+    // --------------------------------
+
     const searchInput = elements.find((el) => {
       const text = (
         (el.label || "") +
@@ -24,14 +57,10 @@ export async function handleIntent(intent, page, elements) {
         el.tag === "input" &&
         (el.type === "search" ||
           text.includes("search") ||
-          text.includes("buscar") ||
-          text.includes("query"))
+          text.includes("buscar"))
       );
     });
 
-    // -----------------------------
-    // usar buscador del sitio
-    // -----------------------------
     if (searchInput) {
       await smartType(page, searchInput.id, query);
 
@@ -49,9 +78,10 @@ export async function handleIntent(intent, page, elements) {
       };
     }
 
-    // -----------------------------
-    // fallback → Brave Search
-    // -----------------------------
+    // --------------------------------
+    // FALLBACK SEARCH ENGINE
+    // --------------------------------
+
     const encoded = encodeURIComponent(query);
 
     await page.goto(`https://search.brave.com/search?q=${encoded}`, {
@@ -142,6 +172,42 @@ export async function handleIntent(intent, page, elements) {
     return {
       status: "tab-closed",
     };
+  }
+
+  // -----------------------------
+  // PAUSE VIDEO
+  // -----------------------------
+  if (intent.type === "pause_video") {
+    const profile = getSiteProfile(page.url());
+
+    if (profile?.video) {
+      await page.evaluate(() => {
+        const video = document.querySelector("video");
+        if (video) video.pause();
+      });
+
+      speakAction("pause_video");
+
+      return { status: "video-paused" };
+    }
+  }
+
+  // -----------------------------
+  // PLAY VIDEO
+  // -----------------------------
+  if (intent.type === "play_video") {
+    const profile = getSiteProfile(page.url());
+
+    if (profile?.video) {
+      await page.evaluate(() => {
+        const video = document.querySelector("video");
+        if (video) video.play();
+      });
+
+      speakAction("play_video");
+
+      return { status: "video-playing" };
+    }
   }
 
   return null;

@@ -6,6 +6,8 @@ type Intent =
   | { type: "navigate_text"; target: string }
   | { type: "new_tab" }
   | { type: "close_tab" }
+  | { type: "pause_video" }
+  | { type: "play_video" }
   | { type: "switch_tab"; index: number }
   | { type: "none" };
 
@@ -54,6 +56,23 @@ export function detectIntent(command: string): Intent {
     lower.includes("resume")
   ) {
     return { type: "read_page" };
+  }
+
+  // video
+  if (
+    lower.includes("pausa") ||
+    lower.includes("pausar") ||
+    lower.includes("pause")
+  ) {
+    return { type: "pause_video" };
+  }
+
+  if (
+    lower.includes("reproduce") ||
+    lower.includes("continuar") ||
+    lower.includes("play")
+  ) {
+    return { type: "play_video" };
   }
 
   // navegación por texto de enlace
