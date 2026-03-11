@@ -50,14 +50,22 @@ export function rankElements(elements: any[]) {
 
       if (el.tag === "button" && text.includes("search")) score += 6;
 
-      if (el.tag === "input") score += 3;
+      if (el.tag === "button" || el.type === "submit") {
+        score += 3;
+      }
+
+      if (el.tag === "input") score += 5;
       if (el.tag === "button") score += 2;
-      if (el.tag === "a") score += 1;
+      if (el.tag === "a") {
+        score += 2;
+
+        if (area > 6000) score += 2;
+      }
 
       if (el.type === "navigation") score += 4;
       if (el.type === "content") score += 3;
       if (el.type === "result") score += 2;
-      if (el.type === "utility") score -= 1;
+      if (el.type === "utility") score -= 3;
 
       return {
         ...el,
@@ -65,5 +73,5 @@ export function rankElements(elements: any[]) {
       };
     })
     .sort((a, b) => b.score - a.score)
-    .slice(0, 15);
+    .slice(0, 20);
 }

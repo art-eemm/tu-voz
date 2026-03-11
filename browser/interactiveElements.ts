@@ -6,7 +6,15 @@ export async function extractInteractiveElements(page: Page) {
   const elements = await page.evaluate(() => {
     function visible(el: Element) {
       const rect = el.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0;
+
+      return (
+        rect.width > 0 &&
+        rect.height > 0 &&
+        rect.top < window.innerHeight &&
+        rect.bottom > 0 &&
+        rect.left < window.innerWidth &&
+        rect.right > 0
+      );
     }
 
     function clean(text: string | null) {
@@ -18,7 +26,7 @@ export async function extractInteractiveElements(page: Page) {
     let idCounter = 1;
 
     const interactive = document.querySelectorAll(
-      "input, textarea, button, a, [role='button']",
+      "input, textarea, button, a, select, [role='button'], [onclick]",
     );
 
     interactive.forEach((el: any) => {
