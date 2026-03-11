@@ -10,7 +10,7 @@ export async function GET() {
     await refreshOverlay(page);
   });
 
-  await page.goto("https://google.com", {
+  await page.goto("https://search.brave.com", {
     waitUntil: "domcontentloaded",
   });
 

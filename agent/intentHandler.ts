@@ -2,15 +2,59 @@ import { refreshOverlay } from "@/browser/overlayManager";
 import { narratePage } from "./pageNarrator";
 import { speakAction } from "./voiceHandler";
 import { openNewTab, switchTab, closeTab } from "@/browser/tabManager";
+import { smartType } from "@/browser/actions";
 
 export async function handleIntent(intent, page, elements) {
   // -----------------------------
-  // SEARCH (Brave Search)
+  // SEARCH (context aware)
   // -----------------------------
   if (intent.type === "search") {
-    const query = encodeURIComponent(intent.query);
+    const query = intent.query;
 
-    await page.goto(`https://search.brave.com/search?q=${query}`, {
+    // buscar input de búsqueda dentro de la página
+    const searchInput = elements.find((el) => {
+      const text = (
+        (el.label || "") +
+        (el.placeholder || "") +
+        (el.name || "") +
+        (el.domId || "")
+      ).toLowerCase();
+
+      return (
+        el.tag === "input" &&
+        (el.type === "search" ||
+          text.includes("search") ||
+          text.includes("buscar") ||
+          text.includes("query"))
+      );
+    });
+
+    // -----------------------------
+    // usar buscador del sitio
+    // -----------------------------
+    if (searchInput) {
+      await smartType(page, searchInput.id, query);
+
+      await page.keyboard.press("Enter");
+
+      await refreshOverlay(page);
+
+      await narratePage(page);
+
+      speakAction("search_page", { query });
+
+      return {
+        status: "page-search",
+        query,
+      };
+    }
+
+    // -----------------------------
+    // fallback → Brave Search
+    // -----------------------------
+    const encoded = encodeURIComponent(query);
+
+    await page.goto(`https://search.brave.com/search?q=${encoded}`, {
       waitUntil: "domcontentloaded",
     });
 
@@ -18,11 +62,11 @@ export async function handleIntent(intent, page, elements) {
 
     await narratePage(page);
 
-    speakAction("search", { query: intent.query });
+    speakAction("search", { query });
 
     return {
       status: "search-executed",
-      query: intent.query,
+      query,
     };
   }
 
@@ -59,14 +103,22 @@ export async function handleIntent(intent, page, elements) {
     };
   }
 
+  // -----------------------------
+  // NEW TAB
+  // -----------------------------
   if (intent.type === "new_tab") {
-    const page = await openNewTab();
+    await openNewTab();
 
     speakAction("new_tab");
 
-    return { status: "tab-opened" };
+    return {
+      status: "tab-opened",
+    };
   }
 
+  // -----------------------------
+  // SWITCH TAB
+  // -----------------------------
   if (intent.type === "switch_tab") {
     const ok = switchTab(intent.index - 1);
 
@@ -74,15 +126,22 @@ export async function handleIntent(intent, page, elements) {
 
     speakAction("switch_tab", { index: intent.index });
 
-    return { status: "tab-switched" };
+    return {
+      status: "tab-switched",
+    };
   }
 
+  // -----------------------------
+  // CLOSE TAB
+  // -----------------------------
   if (intent.type === "close_tab") {
     await closeTab();
 
     speakAction("close_tab");
 
-    return { status: "tab-closed" };
+    return {
+      status: "tab-closed",
+    };
   }
 
   return null;
