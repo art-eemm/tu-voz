@@ -1,19 +1,17 @@
-import { smartType } from "@/browser/actions";
 import { refreshOverlay } from "@/browser/overlayManager";
 import { narratePage } from "./pageNarrator";
 import { speakAction } from "./voiceHandler";
 
 export async function handleIntent(intent, page, elements) {
+  // -----------------------------
+  // SEARCH (Brave Search)
+  // -----------------------------
   if (intent.type === "search") {
-    const searchInput = elements.find(
-      (e) => e.tag === "input" && (e.type === "search" || e.type === "text"),
-    );
+    const query = encodeURIComponent(intent.query);
 
-    if (!searchInput) return null;
-
-    await smartType(page, searchInput.id, intent.query);
-
-    await page.keyboard.press("Enter");
+    await page.goto(`https://search.brave.com/search?q=${query}`, {
+      waitUntil: "domcontentloaded",
+    });
 
     await refreshOverlay(page);
 
@@ -21,9 +19,15 @@ export async function handleIntent(intent, page, elements) {
 
     speakAction("search", { query: intent.query });
 
-    return { status: "search-executed" };
+    return {
+      status: "search-executed",
+      query: intent.query,
+    };
   }
 
+  // -----------------------------
+  // GO BACK
+  // -----------------------------
   if (intent.type === "go_back") {
     await page.goBack({ waitUntil: "domcontentloaded" }).catch(() => {});
 
@@ -31,9 +35,14 @@ export async function handleIntent(intent, page, elements) {
 
     speakAction("go_back");
 
-    return { status: "went-back" };
+    return {
+      status: "went-back",
+    };
   }
 
+  // -----------------------------
+  // SCROLL
+  // -----------------------------
   if (intent.type === "scroll") {
     const amount = intent.direction === "up" ? -800 : 800;
 
@@ -43,7 +52,10 @@ export async function handleIntent(intent, page, elements) {
 
     speakAction("scroll");
 
-    return { status: "scrolled" };
+    return {
+      status: "scrolled",
+      direction: intent.direction,
+    };
   }
 
   return null;
