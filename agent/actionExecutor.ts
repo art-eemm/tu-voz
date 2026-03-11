@@ -1,18 +1,19 @@
 import { smartClick, smartType } from "@/browser/actions";
 import { extractReadableContent } from "@/browser/contentExtractor";
 import { readPageContent } from "./pageReader";
-import { pushVoiceEvent } from "./voiceBus";
 import { addConversation } from "./agentState";
 import { visionClick } from "@/browser/visionClick";
 import { semanticMatchLink } from "./semanticLinkMatcher";
 import { getVisibleLinks } from "@/browser/visibleLinks";
 import { extractLinks } from "@/browser/extractLinks";
 import { storeLinks } from "./navigationMemoryLinks";
+import { narrate } from "./voiceNarrator";
 
 export async function executeAction(page, decision, command, context) {
   const action = decision.action?.toLowerCase();
 
   if (action === "click") {
+    narrate("Haciendo clic");
     // -----------------------------
     // 1️⃣ CLICK POR ÍNDICE
     // -----------------------------
@@ -108,12 +109,14 @@ export async function executeAction(page, decision, command, context) {
   }
 
   if (action === "type") {
+    narrate(`Escribiendo ${decision.text}`);
     await smartType(page, decision.target, decision.text);
 
     await page.keyboard.press("Enter");
   }
 
   if (action === "navigate") {
+    narrate("Abriendo página");
     await page.goto(decision.url, {
       waitUntil: "domcontentloaded",
     });
@@ -131,12 +134,12 @@ export async function executeAction(page, decision, command, context) {
 
     const voice = answer?.slice(0, 700);
 
-    pushVoiceEvent(voice);
+    narrate(voice);
 
     return {
       status: "read",
       response: answer,
-      voice,
+      // voice,
     };
   }
 

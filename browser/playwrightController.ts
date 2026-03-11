@@ -4,6 +4,7 @@ import {
   registerInitialPage,
   getActivePage,
 } from "./tabManager";
+import { pushVoiceEvent } from "@/agent/voiceBus";
 
 class PlaywrightController {
   browser: Browser | null = null;
@@ -22,6 +23,12 @@ class PlaywrightController {
     const context = await this.browser.newContext();
 
     const page = await context.newPage();
+
+    page.on("framenavigated", async () => {
+      const title = await page.title();
+
+      pushVoiceEvent(`Nueva página: ${title}`);
+    });
 
     registerInitialPage(page);
 
