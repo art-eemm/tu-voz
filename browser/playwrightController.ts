@@ -1,4 +1,5 @@
 import { chromium, Browser, Page } from "playwright";
+import { registerBrowser, registerInitialPage } from "./tabManager";
 
 class PlaywrightController {
   browser: Browser | null = null;
@@ -13,9 +14,13 @@ class PlaywrightController {
       headless: false,
     });
 
+    registerBrowser(this.browser);
+
     const context = await this.browser.newContext();
 
     this.page = await context.newPage();
+
+    registerInitialPage(this.page);
 
     return this.page;
   }

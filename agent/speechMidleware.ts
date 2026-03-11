@@ -18,6 +18,15 @@ export function speechForAction(action: string, data?: any) {
     case "read_page":
       return data?.text;
 
+    case "new_tab":
+      return "Nueva pestaña abierta";
+
+    case "switch_tab":
+      return `Cambiando a la pestaña ${data.index}`;
+
+    case "close_tab":
+      return "Pestaña cerrada";
+
     default:
       return "";
   }

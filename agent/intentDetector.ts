@@ -4,6 +4,9 @@ type Intent =
   | { type: "scroll"; direction: "up" | "down" }
   | { type: "read_page" }
   | { type: "navigate_text"; target: string }
+  | { type: "new_tab" }
+  | { type: "close_tab" }
+  | { type: "switch_tab"; index: number }
   | { type: "none" };
 
 export function detectIntent(command: string): Intent {
@@ -68,6 +71,19 @@ export function detectIntent(command: string): Intent {
     if (target.length > 1) {
       return { type: "navigate_text", target };
     }
+  }
+
+  if (lower.includes("nueva pestaña") || lower.includes("abre pestaña")) {
+    return { type: "new_tab" };
+  }
+
+  if (lower.includes("cierra pestaña")) {
+    return { type: "close_tab" };
+  }
+
+  if (lower.includes("cambia a la pestaña")) {
+    const num = parseInt(lower.replace(/\D/g, ""));
+    return { type: "switch_tab", index: num };
   }
 
   return { type: "none" };

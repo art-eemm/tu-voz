@@ -2,9 +2,10 @@ import { browserController } from "@/browser/playwrightController";
 import { clickByText } from "@/browser/actions";
 import { buildPageContext } from "@/browser/pageContext";
 import { decideAction } from "./aiDecision";
+import { getActivePage } from "@/browser/tabManager";
 
 export async function executeCommand(command: string) {
-  const page = await browserController.getPage();
+  const page = getActivePage();
 
   const context = await buildPageContext(page);
 
