@@ -1,4 +1,4 @@
-import { runAgent } from "@/agent/agentLoop";
+import { runAgent } from "@/agent/runAgent";
 
 export async function POST(req: Request) {
   const { command } = await req.json();

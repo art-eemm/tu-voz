@@ -1,30 +1,34 @@
 import { subscribeVoice } from "@/agent/voiceBus";
 
 export async function GET() {
+  const encoder = new TextEncoder();
+
   const stream = new ReadableStream({
     start(controller) {
-      const encoder = new TextEncoder();
-
       const send = (text: string) => {
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ text })}\n\n`),
-        );
+        try {
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ text })}\n\n`),
+          );
+        } catch {
+          unsubscribe();
+        }
       };
 
       const unsubscribe = subscribeVoice(send);
 
       const heartbeat = setInterval(() => {
-        controller.enqueue(encoder.encode(": ping\n\n"));
+        try {
+          controller.enqueue(encoder.encode(": ping\n\n"));
+        } catch {
+          clearInterval(heartbeat);
+          unsubscribe();
+        }
       }, 15000);
 
       controller.enqueue(
-        encoder.encode("data: " + JSON.stringify({ connected: true }) + "\n\n"),
+        encoder.encode(`data: ${JSON.stringify({ connected: true })}\n\n`),
       );
-
-      return () => {
-        clearInterval(heartbeat);
-        unsubscribe();
-      };
     },
   });
 

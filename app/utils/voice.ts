@@ -1,31 +1,37 @@
 let queue: string[] = [];
 let speaking = false;
 
-function splitText(text: string, maxLength = 180) {
+function splitText(text: string, maxLength = 160) {
+  const sentences = text.match(/[^\.!\?]+[\.!\?]+/g) || [text];
+
   const parts: string[] = [];
 
-  let current = "";
-
-  const words = text.split(" ");
-
-  for (const word of words) {
-    if ((current + word).length > maxLength) {
-      parts.push(current.trim());
-      current = "";
+  for (const s of sentences) {
+    if (s.length <= maxLength) {
+      parts.push(s.trim());
+      continue;
     }
 
-    current += word + " ";
-  }
+    const words = s.split(" ");
+    let current = "";
 
-  if (current.trim().length) {
-    parts.push(current.trim());
+    for (const w of words) {
+      if ((current + w).length > maxLength) {
+        parts.push(current.trim());
+        current = "";
+      }
+
+      current += w + " ";
+    }
+
+    if (current.trim()) parts.push(current.trim());
   }
 
   return parts;
 }
 
 function speakNext() {
-  if (queue.length === 0) {
+  if (!queue.length) {
     speaking = false;
     return;
   }
@@ -41,8 +47,14 @@ function speakNext() {
   utterance.pitch = 1;
 
   utterance.onend = () => {
-    // speakNext();
+    setTimeout(() => {
+      speakNext();
+    }, 150);
+  };
+
+  utterance.onerror = () => {
     speaking = false;
+    speakNext();
   };
 
   window.speechSynthesis.speak(utterance);
@@ -56,7 +68,11 @@ export function speak(text: string) {
   queue.push(...parts);
 
   if (!speaking) {
-    speakNext();
+    window.speechSynthesis.cancel();
+
+    setTimeout(() => {
+      speakNext();
+    }, 100);
   }
 }
 

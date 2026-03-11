@@ -10,7 +10,7 @@ export async function GET() {
     await refreshOverlay(page);
   });
 
-  await page.goto("https://wikipedia.org", {
+  await page.goto("https://google.com", {
     waitUntil: "domcontentloaded",
   });
 

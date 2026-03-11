@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useVoice } from "./hooks/useVoice";
 import { speak } from "./utils/voice";
 import { motion } from "framer-motion";
@@ -27,10 +27,14 @@ export default function Page() {
     startBrowser();
   }, []);
 
-  useEffect(() => {
-    const eventSource = new EventSource("/api/voice-stream");
+  const streamRef = useRef<EventSource | null>(null);
 
-    eventSource.onmessage = (event) => {
+  useEffect(() => {
+    if (streamRef.current) return;
+
+    const stream = new EventSource("/api/voice-stream");
+
+    stream.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
       if (data?.text) {
@@ -38,12 +42,31 @@ export default function Page() {
       }
     };
 
-    eventSource.onerror = () => {
+    streamRef.current = stream;
+
+    return () => {
+      stream.close();
+    };
+  }, []);
+
+  useEffect(() => {
+    const stream = new EventSource("/api/voice-stream");
+
+    stream.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data?.text) {
+        console.log("VOICE STREAM:", data.text);
+        speak(data.text);
+      }
+    };
+
+    stream.onerror = () => {
       console.log("Voice stream disconnected");
     };
 
     return () => {
-      eventSource.close();
+      stream.close();
     };
   }, []);
 
