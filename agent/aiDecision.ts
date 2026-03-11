@@ -27,6 +27,8 @@ export async function decideAction(
     lower.includes("explica esta página") ||
     lower.includes("lee") ||
     lower.includes("resume") ||
+    lower.includes("cual") ||
+    lower.includes("cuales") ||
     lower.includes("explica")
   ) {
     return { action: "read_page" };
