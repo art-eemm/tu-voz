@@ -67,6 +67,11 @@ export function rankElements(elements: any[]) {
       if (el.type === "result") score += 2;
       if (el.type === "utility") score -= 3;
 
+      if (el.semanticType === "search") score += 12;
+      if (el.semanticType === "button") score += 6;
+      if (el.semanticType === "link") score += 4;
+      if (el.semanticType === "input") score += 5;
+
       return {
         ...el,
         score: Math.round(score * 100) / 100,

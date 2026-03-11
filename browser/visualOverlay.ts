@@ -18,7 +18,18 @@ export async function drawOverlay(page: Page, elements: any[]) {
     elements.forEach((el, index) => {
       const marker = document.createElement("div");
 
-      marker.innerText = String(index + 1);
+      marker.innerText =
+        (el.semanticType ? el.semanticType[0].toUpperCase() : "") + (index + 1);
+
+      if (el.semanticType === "search") {
+        marker.style.background = "#3b82f6";
+      } else if (el.semanticType === "button") {
+        marker.style.background = "#22c55e";
+      } else if (el.semanticType === "link") {
+        marker.style.background = "#f97316";
+      } else {
+        marker.style.background = "#ef4444";
+      }
 
       marker.style.position = "absolute";
       marker.style.left = el.x + "px";

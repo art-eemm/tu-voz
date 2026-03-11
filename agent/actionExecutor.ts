@@ -3,6 +3,7 @@ import { extractReadableContent } from "@/browser/contentExtractor";
 import { readPageContent } from "./pageReader";
 import { pushVoiceEvent } from "./voiceBus";
 import { addConversation } from "./agentState";
+import { visionClick } from "@/browser/visionClick";
 
 export async function executeAction(page, decision, command, context) {
   const action = decision.action?.toLowerCase();
@@ -37,7 +38,15 @@ export async function executeAction(page, decision, command, context) {
       };
     }
 
-    await smartClick(page, decision.target);
+    const element = context.elements.find((e) => e.id === decision.target);
+
+    if (element) {
+      const success = await visionClick(page, element);
+
+      if (!success) {
+        await smartClick(page, decision.target);
+      }
+    }
   }
 
   if (action === "type") {

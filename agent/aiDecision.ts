@@ -132,7 +132,7 @@ You can click elements in two ways:
 
 {
   "action": "click",
-  "target": "3"
+  "target": "L3"
 }
 
 The number corresponds to the numbered markers shown in the screenshot.
