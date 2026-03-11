@@ -137,22 +137,22 @@ export async function handleIntent(intent, page, elements) {
   // NEW TAB
   // -----------------------------
   if (intent.type === "new_tab") {
-    await openNewTab();
+    const page = await openNewTab();
+
+    await page.goto("https://search.brave.com");
 
     speakAction("new_tab");
 
-    return {
-      status: "tab-opened",
-    };
+    return { status: "tab-opened" };
   }
 
   // -----------------------------
   // SWITCH TAB
   // -----------------------------
   if (intent.type === "switch_tab") {
-    const ok = switchTab(intent.index - 1);
+    const page = switchTab(intent.index - 1);
 
-    if (!ok) return null;
+    if (!page) return null;
 
     speakAction("switch_tab", { index: intent.index });
 

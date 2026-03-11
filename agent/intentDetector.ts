@@ -96,6 +96,42 @@ export function detectIntent(command: string): Intent {
     return { type: "new_tab" };
   }
 
+  if (
+    lower.includes("nueva pestaña") ||
+    lower.includes("abre pestaña") ||
+    lower.includes("abrir pestaña") ||
+    lower.includes("abrir nueva pestaña") ||
+    lower.includes("abre nueva pestaña") ||
+    lower.includes("open tab") ||
+    lower.includes("new tab")
+  ) {
+    return { type: "new_tab" };
+  }
+
+  if (
+    lower.includes("cambia a la pestaña") ||
+    lower.includes("ir a pestaña") ||
+    lower.includes("siguiente pestaña") ||
+    lower.includes("switch tab")
+  ) {
+    const number = lower.match(/\d+/);
+
+    if (number) {
+      return {
+        type: "switch_tab",
+        index: Number(number[0]),
+      };
+    }
+  }
+
+  if (
+    lower.includes("cierra pestaña") ||
+    lower.includes("cerrar pestaña") ||
+    lower.includes("close tab")
+  ) {
+    return { type: "close_tab" };
+  }
+
   if (lower.includes("cierra pestaña")) {
     return { type: "close_tab" };
   }

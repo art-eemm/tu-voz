@@ -3,24 +3,59 @@ export function validateStep(step: any, context: any) {
 
   const action = step.action.toLowerCase();
 
-  if (action === "click" || action === "type") {
+  // -----------------------------
+  // CLICK
+  // -----------------------------
+  if (action === "click") {
+    // click por texto
+    if (step.targetText) {
+      return step;
+    }
+
+    // click por índice (overlay)
+    if (!isNaN(Number(step.target))) {
+      return step;
+    }
+
+    // click por id (el_5)
     const exists = context.elements?.some((el: any) => el.id === step.target);
 
     if (!exists) {
       console.log("STEP VALIDATION FAILED:", step);
       return null;
     }
+
+    return step;
   }
 
-  if (action === "type" && !step.text) {
-    console.log("TYPE WITHOUT TEXT");
-    return null;
+  // -----------------------------
+  // TYPE
+  // -----------------------------
+  if (action === "type") {
+    if (!step.text) {
+      console.log("TYPE WITHOUT TEXT");
+      return null;
+    }
+
+    const exists = context.elements?.some((el: any) => el.id === step.target);
+
+    if (!exists) {
+      console.log("TYPE TARGET NOT FOUND:", step);
+      return null;
+    }
+
+    return step;
   }
 
+  // -----------------------------
+  // CLICK XY (vision click)
+  // -----------------------------
   if (action === "click_xy") {
     if (typeof step.x !== "number" || typeof step.y !== "number") {
       return null;
     }
+
+    return step;
   }
 
   return step;

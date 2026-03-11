@@ -1,31 +1,12 @@
 import { Page } from "playwright";
+import { generateStableId } from "@/agent/stableElementId";
+import { classifyElement } from "@/agent/semanticClassifier";
 
 export async function extractInteractiveElements(page: Page) {
   await page.waitForLoadState("domcontentloaded").catch(() => {});
 
-  const elements = await page.evaluate(() => {
-    function classifyElement(el) {
-      const text = (
-        (el.label || "") +
-        (el.placeholder || "") +
-        (el.name || "") +
-        (el.domId || "")
-      ).toLowerCase();
-
-      if (el.tag === "input" && el.type === "search") return "search";
-
-      if (text.includes("search") || text.includes("buscar")) return "search";
-
-      if (el.tag === "button" || el.type === "button") return "button";
-
-      if (el.tag === "a") return "link";
-
-      if (el.tag === "input") return "input";
-
-      return "generic";
-    }
-
-    function visible(el: Element) {
+  const rawElements = await page.evaluate(() => {
+    function visible(el) {
       const rect = el.getBoundingClientRect();
 
       return (
@@ -38,13 +19,12 @@ export async function extractInteractiveElements(page: Page) {
       );
     }
 
-    function clean(text: string | null) {
+    function clean(text) {
       if (!text) return "";
       return text.trim().replace(/\s+/g, " ");
     }
 
-    const result: any[] = [];
-    let idCounter = 1;
+    const result = [];
 
     const interactive = document.querySelectorAll(
       "input, textarea, button, select, [role='button'], [onclick], a[href]",
@@ -74,20 +54,9 @@ export async function extractInteractiveElements(page: Page) {
 
       if (!el.innerText && !aria && !placeholder) return;
 
-      const semanticType = classifyElement({
-        tag: el.tagName.toLowerCase(),
-        type,
-        label,
-        placeholder,
-        name,
-        domId: id,
-      });
-
       result.push({
-        id: `el_${idCounter++}`,
         tag: el.tagName.toLowerCase(),
         type,
-        semanticType,
         label: clean(label),
         placeholder: clean(placeholder),
         name,
@@ -100,6 +69,18 @@ export async function extractInteractiveElements(page: Page) {
     });
 
     return result;
+  });
+
+  const elements = rawElements.map((el) => {
+    const semanticType = classifyElement(el);
+
+    const stableId = generateStableId(el);
+
+    return {
+      ...el,
+      id: stableId,
+      semanticType,
+    };
   });
 
   return elements;

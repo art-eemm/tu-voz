@@ -6,13 +6,21 @@ import { rankElements } from "./elementRanking";
 import { extractResults } from "@/browser/resultExtractor";
 import { registerResults } from "@/browser/resultStore";
 import { drawOverlay } from "@/browser/visualOverlay";
+
 import { runPipeline } from "./agentPipeline";
 import { addMessage } from "./conversationMemory";
+
+import { detectIntent } from "./intentDetector";
+import { handleIntent } from "./intentHandler";
 
 export async function runAgent(command: string) {
   addMessage("user", command);
 
   const page = await browserController.getPage();
+
+  // -----------------------------
+  // EXTRAER ELEMENTOS
+  // -----------------------------
 
   const rawElements = await extractInteractiveElements(page);
 
@@ -28,14 +36,27 @@ export async function runAgent(command: string) {
 
   registerResults(results);
 
-  return runPipeline(
-    command,
-    {
-      ...context,
-      elements,
-      results,
-    },
-    page,
+  const fullContext = {
+    ...context,
     elements,
-  );
+    results,
+  };
+
+  // -----------------------------
+  // INTENT DETECTION
+  // -----------------------------
+
+  const intent = detectIntent(command);
+
+  const intentResult = await handleIntent(intent, page, elements);
+
+  if (intentResult) {
+    return intentResult;
+  }
+
+  // -----------------------------
+  // AI PIPELINE
+  // -----------------------------
+
+  return runPipeline(command, fullContext, page, elements);
 }

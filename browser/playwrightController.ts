@@ -1,13 +1,16 @@
 import { chromium, Browser, Page } from "playwright";
-import { registerBrowser, registerInitialPage } from "./tabManager";
+import {
+  registerBrowser,
+  registerInitialPage,
+  getActivePage,
+} from "./tabManager";
 
 class PlaywrightController {
   browser: Browser | null = null;
-  page: Page | null = null;
 
   async start() {
-    if (this.browser && this.page) {
-      return this.page;
+    if (this.browser) {
+      return getActivePage();
     }
 
     this.browser = await chromium.launch({
@@ -18,24 +21,23 @@ class PlaywrightController {
 
     const context = await this.browser.newContext();
 
-    this.page = await context.newPage();
+    const page = await context.newPage();
 
-    registerInitialPage(this.page);
+    registerInitialPage(page);
 
-    return this.page;
+    return page;
   }
 
   async goto(url: string) {
-    if (!this.page) throw new Error("Browser not started");
+    const page = getActivePage();
 
-    await this.page.goto(url);
-    await this.page.waitForLoadState("domcontentloaded");
+    await page.goto(url);
+
+    await page.waitForLoadState("domcontentloaded");
   }
 
-  async getPage() {
-    if (!this.page) throw new Error("Browser not started");
-
-    return this.page;
+  async getPage(): Promise<Page> {
+    return getActivePage();
   }
 }
 

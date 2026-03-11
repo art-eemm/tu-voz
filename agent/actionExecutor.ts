@@ -4,6 +4,10 @@ import { readPageContent } from "./pageReader";
 import { pushVoiceEvent } from "./voiceBus";
 import { addConversation } from "./agentState";
 import { visionClick } from "@/browser/visionClick";
+import { semanticMatchLink } from "./semanticLinkMatcher";
+import { getVisibleLinks } from "@/browser/visibleLinks";
+import { extractLinks } from "@/browser/extractLinks";
+import { storeLinks } from "./navigationMemoryLinks";
 
 export async function executeAction(page, decision, command, context) {
   const action = decision.action?.toLowerCase();
@@ -65,49 +69,40 @@ export async function executeAction(page, decision, command, context) {
     // 3️⃣ CLICK POR TEXTO
     // -----------------------------
     if (decision.targetText) {
-      await page
-        .waitForSelector("a, button, [role='button']", { timeout: 2000 })
-        .catch(() => {});
+      const links = await getVisibleLinks(page);
 
-      const clicked = await page.evaluate((rawText: string) => {
-        function normalize(str: string) {
-          if (!str) return "";
+      const bestMatch = await semanticMatchLink(decision.targetText, links);
 
-          return str
-            .toLowerCase()
-            .replace(/^[a-z]?\d+\s*/i, "")
-            .replace(/[^\w\s]/g, "")
-            .replace(/\s+/g, " ")
-            .trim();
+      if (bestMatch) {
+        const clicked = await page.evaluate((text) => {
+          function normalize(str) {
+            return str?.toLowerCase().replace(/\s+/g, " ").trim();
+          }
+
+          const targetText = normalize(text);
+
+          const clickable = Array.from(
+            document.querySelectorAll("a, button, [role='button']"),
+          );
+
+          const target = clickable.find(
+            (el) => normalize(el.textContent) === targetText,
+          );
+
+          if (target) {
+            (target as HTMLElement).click();
+            return true;
+          }
+
+          return false;
+        }, bestMatch);
+
+        if (clicked) {
+          return {
+            status: "clicked-semantic",
+            text: bestMatch,
+          };
         }
-
-        const targetText = normalize(rawText);
-
-        const words = targetText.split(" ");
-
-        const clickable = Array.from(
-          document.querySelectorAll("a, button, [role='button']"),
-        );
-
-        const target = clickable.find((el) => {
-          const elText = normalize(el.textContent);
-
-          return words.every((w) => elText.includes(w));
-        });
-
-        if (target) {
-          (target as HTMLElement).click();
-          return true;
-        }
-
-        return false;
-      }, decision.targetText);
-
-      if (clicked) {
-        return {
-          status: "clicked-text",
-          text: decision.targetText,
-        };
       }
     }
   }
@@ -122,6 +117,9 @@ export async function executeAction(page, decision, command, context) {
     await page.goto(decision.url, {
       waitUntil: "domcontentloaded",
     });
+
+    const links = await extractLinks(page);
+    storeLinks(links);
   }
 
   if (action === "read_page") {

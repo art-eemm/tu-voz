@@ -78,5 +78,5 @@ export function rankElements(elements: any[]) {
       };
     })
     .sort((a, b) => b.score - a.score)
-    .slice(0, 20);
+    .slice(0, 40);
 }
