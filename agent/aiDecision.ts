@@ -101,30 +101,23 @@ ${JSON.stringify(memory, null, 2)}
 Page context:
 ${JSON.stringify(formatted, null, 2)}
 
-Available elements:
-${JSON.stringify(
-  context.elements
-    .map((e) => ({
-      id: e.id,
-      label: e.label,
-      type: e.tag,
-      score: e.score,
-    }))
-    .slice(0, 15),
-  null,
-  2,
-)}
+Visible elements (number corresponds to overlay label):
+${context.elements
+  .slice(0, 15)
+  .map((el, i) => `[${i + 1}] ${el.tag} ${el.label || el.placeholder || ""}`)
+  .join("\n")}
 
 Tracked elements from previous steps:
 ${JSON.stringify(tracked, null, 2)}
 
-The screenshot contains visual markers like:
+You may reference elements by number.
 
-el_1
-el_2
-el_3
+Example:
 
-If the DOM elements are incorrect, you may use coordinates from the screenshot.
+{
+  "action": "click_index",
+  "index": 2
+}
 
 When using the "type" action you MUST include a target element id.
 
