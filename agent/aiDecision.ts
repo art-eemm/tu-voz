@@ -119,14 +119,25 @@ Example:
   "index": 2
 }
 
-When using the "type" action you MUST include a target element id.
+You can click elements in two ways:
 
-Example:
+1. By element id
+
 {
- "action": "type",
- "target": "el_13",
- "text": "youtube"
+  "action": "click",
+  "target": "el_5"
 }
+
+2. By visual index
+
+{
+  "action": "click",
+  "target": "3"
+}
+
+The number corresponds to the numbered markers shown in the screenshot.
+
+Prefer clicking elements using the number markers when available.
 
 Respond ONLY with JSON.
 `;

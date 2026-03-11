@@ -15,11 +15,11 @@ export async function handleDecision(command, context, page) {
     context.elements,
   );
 
-  if (!indexResult) return indexResult;
+  if (indexResult) return indexResult;
 
   if (!decision || decision.action === "none") {
     return { status: "no-action" };
   }
 
-  return executeAction(page, decision, command);
+  return executeAction(page, decision, command, context);
 }

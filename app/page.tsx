@@ -17,6 +17,9 @@ export default function Page() {
   const [response, setResponse] = useState("");
   const [listening, setListening] = useState(false);
 
+  const streamRef = useRef<EventSource | null>(null);
+
+  // iniciar navegador
   useEffect(() => {
     async function startBrowser() {
       setBrowserStatus("loading");
@@ -27,8 +30,7 @@ export default function Page() {
     startBrowser();
   }, []);
 
-  const streamRef = useRef<EventSource | null>(null);
-
+  // voice stream (solo uno)
   useEffect(() => {
     if (streamRef.current) return;
 
@@ -38,26 +40,9 @@ export default function Page() {
       const data = JSON.parse(event.data);
 
       if (data?.text) {
-        speak(data.text);
-      }
-    };
-
-    streamRef.current = stream;
-
-    return () => {
-      stream.close();
-    };
-  }, []);
-
-  useEffect(() => {
-    const stream = new EventSource("/api/voice-stream");
-
-    stream.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-
-      if (data?.text) {
         console.log("VOICE STREAM:", data.text);
         speak(data.text);
+        setResponse(data.text);
       }
     };
 
@@ -65,8 +50,11 @@ export default function Page() {
       console.log("Voice stream disconnected");
     };
 
+    streamRef.current = stream;
+
     return () => {
       stream.close();
+      streamRef.current = null;
     };
   }, []);
 
@@ -83,12 +71,8 @@ export default function Page() {
       body: JSON.stringify({ command }),
     });
 
-    const data = await res.json();
-
-    if (data.voice) {
-      setResponse(data.voice);
-      speak(data.voice);
-    }
+    // ya no reproducimos voz aquí
+    await res.json().catch(() => null);
   }, []);
 
   const { startListening, stopListening } = useVoice(handleCommand);
